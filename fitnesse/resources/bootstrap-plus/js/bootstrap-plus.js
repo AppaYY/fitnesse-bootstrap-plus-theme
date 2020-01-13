@@ -76,6 +76,12 @@ $( document ).ready(function() {
    $(".static").each(function() {
         $(this).before('<i class="fa fa-file-o icon-static" aria-hidden="true"></i>&nbsp;');
    });
+
+   // Add hidden tag buttons upon entering overview page
+    $(".test, .suite, .static").each(function() {
+        $(this).after('<i class="fas fa-plus-circle addTag"></i>');
+    });
+
    $('.contents li a').each(function() {
        var item = $(this)
        var orig = item.html();
@@ -216,5 +222,93 @@ $( document ).ready(function() {
                 $('#autoSave-switch').addClass('fa-toggle-on');
             }
         }
+
+    // Add hover function to show add tag button
+    $('.suite').parent().hover(
+        function() {
+            $(this).find('.addTag:first').css("visibility", "visible");
+        }, function() {
+            $(this).find('.addTag:first').css("visibility", "hidden");
+        }
+    );
+    $('.static').parent().hover(
+        function() {
+            $(this).find('.addTag:first').css("visibility", "visible");
+        }, function() {
+            $(this).find('.addTag:first').css("visibility", "hidden");
+        }
+    );
+    $('.test').parent().hover(
+        function() {
+            $(this).find('.addTag:first').css("visibility", "visible");
+        }, function() {
+            $(this).find('.addTag:first').css("visibility", "hidden");
+        }
+    );
+
+    // Click add tag function
+    $('.addTag').click(function() {
+        //Remove all existing tag input fields
+        $('.tagInputOverview').remove();
+        //Add input field
+        $(this).after('<input type="text" class="tagInputOverview">');
+        $('.tagInputOverview').focus();
+        //If "Enter" button is pressed
+        $('.tagInputOverview').keyup(function(event) {
+            if (event.keyCode == 13) {
+                //Get current input value
+                var inputValue = $('.tagInputOverview').val();
+                //Call get current tag list function
+                GetCurrentTagList($(this), inputValue);
+            }
+        });
+    });
+
+    //Get current tag list function
+    function GetCurrentTagList(currentFile, newTags){
+        //Get href value of the a tag
+        var currentURL = currentFile.siblings('a').attr('href');
+
+        //Get current tag list
+        $.ajax({
+            type: 'POST',
+            url: "http://localhost:9090/" + currentURL,
+            contentType: 'application/json; charset=utf-8',
+            data : 'responder=tableOfContents',
+            dataType: 'json',
+            success: function(data){
+                //Convert data object to string
+                var currentTagList = data[0].tags.toString();
+                //Convert input tags to lowercase
+                var newTagsLowercase = newTags.toLowerCase();
+                //Check if input tag exists in current tag list
+                var checkIfExists = currentTagList.includes(newTagsLowercase);
+                //If tag doesn't exist yet, post it
+                if (checkIfExists === false){
+                    //Combine the current tag list and the input tag(s) in 1 variable
+                    var newTagList = currentTagList + ", " + newTagsLowercase;
+                    //Send current href value, new tag list and input tag(s) to post tag function
+                    postTag(currentURL, newTagList, newTagsLowercase);
+                }
+            }
+        });
+    }
+
+    //Post new tag list function
+    function postTag(currentURL, tagList, inputTag) {
+        $.ajax({
+            type: 'POST',
+            url: "http://localhost:9090/" + currentURL,
+            contentType: 'application/json; charset=utf-8',
+            data : 'responder=updateTags&suites=' + tagList,
+            dataType: 'json',
+            success: function(data){
+                //Add new tag span layout to page
+                $("a[href$='" + currentURL + "']").after("<span class='tag'>" + inputTag + "</span>");
+                //Remove input field
+                $('.tagInputOverview').remove();
+            }
+        });
+    }
 });
 
